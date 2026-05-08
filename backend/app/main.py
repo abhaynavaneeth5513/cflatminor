@@ -22,45 +22,79 @@ from fastapi.responses import JSONResponse
 from app.routers import analyze
 
 # ── Logging ──────────────────────────────────────────────────────────────
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",
     datefmt="%H:%M:%S",
 )
+
 logger = logging.getLogger("cflatminor")
 
-UPLOADS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
+# ── Uploads Directory ────────────────────────────────────────────────────
 
+UPLOADS_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)),
+    "uploads"
+)
 
-def _cleanup_stale_uploads(max_age_seconds: int = 3600) -> int:
-    """Remove temp files older than *max_age_seconds*. Returns count deleted."""
+# ── Cleanup Utility ──────────────────────────────────────────────────────
+
+def cleanup_stale_uploads(max_age_seconds: int = 3600) -> int:
+    """
+    Remove temporary uploaded files older than max_age_seconds.
+    """
+
     if not os.path.isdir(UPLOADS_DIR):
         return 0
+
     now = time.time()
     removed = 0
-    for fname in os.listdir(UPLOADS_DIR):
-        fpath = os.path.join(UPLOADS_DIR, fname)
+
+    for filename in os.listdir(UPLOADS_DIR):
+
+        file_path = os.path.join(UPLOADS_DIR, filename)
+
         try:
-            if os.path.isfile(fpath) and (now - os.path.getmtime(fpath)) > max_age_seconds:
-                os.remove(fpath)
+            if (
+                os.path.isfile(file_path)
+                and (now - os.path.getmtime(file_path)) > max_age_seconds
+            ):
+                os.remove(file_path)
                 removed += 1
+
         except OSError:
             pass
+
     return removed
 
+# ── App Lifespan ─────────────────────────────────────────────────────────
 
 @asynccontextmanager
-async def lifespan(application: FastAPI):
-    """Manage application startup and shutdown."""
-    # Startup: ensure uploads directory exists and clean stale files
-    os.makedirs(UPLOADS_DIR, exist_ok=True)
-    stale = _cleanup_stale_uploads()
-    logger.info("CflatMinor Backend started — uploads dir: %s (cleaned %d stale files)", UPLOADS_DIR, stale)
-    yield
-    # Shutdown: cleanup
-    stale = _cleanup_stale_uploads(max_age_seconds=0)
-    logger.info("CflatMinor Backend shutting down (cleaned %d files)", stale)
+async def lifespan(app: FastAPI):
 
+    # Startup
+    os.makedirs(UPLOADS_DIR, exist_ok=True)
+
+    cleaned = cleanup_stale_uploads()
+
+    logger.info(
+        "CflatMinor Backend Started — Uploads: %s | Cleaned %d files",
+        UPLOADS_DIR,
+        cleaned,
+    )
+
+    yield
+
+    # Shutdown
+    cleaned = cleanup_stale_uploads(max_age_seconds=0)
+
+    logger.info(
+        "CflatMinor Backend Shutting Down — Cleaned %d files",
+        cleaned,
+    )
+
+# ── FastAPI App ──────────────────────────────────────────────────────────
 
 app = FastAPI(
     title="CflatMinor API",
@@ -69,34 +103,41 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# ---------------------------------------------------------------------------
-# CORS — Allow the Next.js frontend (localhost:3000) to call the backend
-# ---------------------------------------------------------------------------
+# ── CORS Middleware ──────────────────────────────────────────────────────
+# IMPORTANT:
+# This allows:
+# - localhost frontend
+# - Vercel frontend
+# - mobile access
+# - global deployment
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://0.0.0.0:3000",
-    ],
+
+    # TEMPORARY OPEN ACCESS FOR TESTING
+    allow_origins=["*"],
+
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
 
-# ---------------------------------------------------------------------------
-# Routers
-# ---------------------------------------------------------------------------
+# ── Routers ──────────────────────────────────────────────────────────────
+
 app.include_router(analyze.router)
 
+# ── Global Exception Handler ─────────────────────────────────────────────
 
-# ---------------------------------------------------------------------------
-# Global exception handler — never return non-JSON to the proxy
-# ---------------------------------------------------------------------------
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
-    logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
+
+    logger.exception(
+        "Unhandled exception on %s %s",
+        request.method,
+        request.url.path,
+    )
+
     return JSONResponse(
         status_code=500,
         content={
@@ -106,16 +147,25 @@ async def global_exception_handler(request, exc):
         },
     )
 
+# ── Root Endpoint ────────────────────────────────────────────────────────
 
-# ---------------------------------------------------------------------------
-# Health check
-# ---------------------------------------------------------------------------
+@app.get("/")
+async def root():
+
+    return {
+        "success": True,
+        "message": "CflatMinor Backend Running 🚀",
+    }
+
+# ── Health Check ─────────────────────────────────────────────────────────
+
 @app.get("/health")
 async def health_check():
-    """Quick liveness probe."""
+
     import shutil
 
     ffmpeg_available = shutil.which("ffmpeg") is not None
+
     return {
         "status": "healthy",
         "service": "cflatminor-backend",
