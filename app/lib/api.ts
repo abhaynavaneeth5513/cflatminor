@@ -1,25 +1,11 @@
-/**
- * CflatMinor — API Client Utilities
- * ===================================
- *
- * Typed functions for communicating with the backend via the
- * Next.js API proxy layer. All requests go to /api/* which
- * forwards to the FastAPI backend.
- *
- * Key improvements:
- *   - Frontend timeout with AbortController (3 minutes)
- *   - Safe JSON parsing (never throws on bad response body)
- *   - File size validation before upload
- *   - Typed responses with discriminated unions
- */
-
-// ── Constants ───────────────────────────────────────────────────────────
-
-/** Frontend timeout — slightly longer than the proxy timeout */
 const FETCH_TIMEOUT_MS = 200_000; // 200 seconds
 
 /** Maximum allowed file size (matches backend) */
 const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
+
+/** Railway Backend URL */
+const API_BASE_URL =
+  "https://cflatminor-production.up.railway.app";
 
 // ── Response Types ──────────────────────────────────────────────────────
 
@@ -28,16 +14,19 @@ export interface AnalysisResult {
   filename: string;
   duration_seconds: number;
   instruments: Record<string, number>;
+
   timeline?: Array<{
     timestamp: number;
     instrument: string;
     confidence: number;
   }>;
+
   sections?: Array<{
     start: number;
     end: number;
     label: string;
   }>;
+
   metadata: {
     sample_rate: number;
     tempo_bpm: number;
@@ -70,57 +59,81 @@ export type AnalysisResponse = AnalysisResult | ApiError;
 
 // ── Type Guards ─────────────────────────────────────────────────────────
 
-export function isApiError(response: AnalysisResponse): response is ApiError {
+export function isApiError(
+  response: AnalysisResponse
+): response is ApiError {
   return !response.success;
 }
 
 // ── API Functions ───────────────────────────────────────────────────────
 
 /**
- * Upload an audio file for instrument analysis.
- *
- * @param file - The audio file to analyze (MP3, WAV, FLAC, OGG, M4A)
- * @returns Typed analysis result or error — never throws
+ * Upload audio file for AI analysis
  */
-export async function analyzeAudio(file: File): Promise<AnalysisResponse> {
-  // ── Client-side validation ────────────────────────────────────────
+export async function analyzeAudio(
+  file: File
+): Promise<AnalysisResponse> {
+  
+  // ── Client Validation ───────────────────────────────────────────
+
   if (file.size === 0) {
-    return { success: false, error: "File is empty." };
+    return {
+      success: false,
+      error: "File is empty.",
+    };
   }
 
   if (file.size > MAX_FILE_SIZE_BYTES) {
     return {
       success: false,
-      error: `File too large (${formatFileSize(file.size)}). Maximum is 50 MB.`,
+      error: `File too large (${formatFileSize(
+        file.size
+      )}). Maximum allowed size is 50 MB.`,
     };
   }
 
   if (!isAllowedAudioFile(file)) {
     return {
       success: false,
-      error: "Unsupported file type. Please upload MP3, WAV, FLAC, OGG, or M4A.",
+      error:
+        "Unsupported file type. Please upload MP3, WAV, FLAC, OGG, M4A, AAC, or WMA.",
     };
   }
 
-  // ── Build form data ───────────────────────────────────────────────
+  // ── Build FormData ──────────────────────────────────────────────
+
   const formData = new FormData();
   formData.append("file", file);
 
-  // ── Fetch with timeout ────────────────────────────────────────────
+  // ── Setup Timeout ───────────────────────────────────────────────
+
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, FETCH_TIMEOUT_MS);
 
   let response: Response;
+
+  // ── API Request ─────────────────────────────────────────────────
+
   try {
-    response = await fetch("/api/analyze", {
-      method: "POST",
-      body: formData,
-      signal: controller.signal,
-    });
+    response = await fetch(
+      `${API_BASE_URL}/analyze`,
+      {
+        method: "POST",
+        body: formData,
+        signal: controller.signal,
+      }
+    );
   } catch (err) {
+
     clearTimeout(timeout);
 
-    if (err instanceof DOMException && err.name === "AbortError") {
+    if (
+      err instanceof DOMException &&
+      err.name === "AbortError"
+    ) {
       return {
         success: false,
         error:
@@ -133,14 +146,16 @@ export async function analyzeAudio(file: File): Promise<AnalysisResponse> {
       error:
         err instanceof Error
           ? `Network error: ${err.message}`
-          : "Network error — please check your connection.",
+          : "Network error — please check your internet connection.",
     };
   }
 
   clearTimeout(timeout);
 
-  // ── Parse response safely ─────────────────────────────────────────
+  // ── Read Response Safely ────────────────────────────────────────
+
   let responseText: string;
+
   try {
     responseText = await response.text();
   } catch {
@@ -150,7 +165,8 @@ export async function analyzeAudio(file: File): Promise<AnalysisResponse> {
     };
   }
 
-  // Empty response guard
+  // ── Empty Response Guard ────────────────────────────────────────
+
   if (!responseText || responseText.trim() === "") {
     return {
       success: false,
@@ -158,19 +174,22 @@ export async function analyzeAudio(file: File): Promise<AnalysisResponse> {
     };
   }
 
-  // Parse JSON safely — never throw on malformed JSON
+  // ── Parse JSON Safely ───────────────────────────────────────────
+
   let data: Record<string, unknown>;
+
   try {
     data = JSON.parse(responseText);
   } catch {
     return {
       success: false,
-      error: "Server returned an invalid response.",
-      detail: responseText.slice(0, 200),
+      error: "Server returned invalid JSON.",
+      detail: responseText.slice(0, 300),
     };
   }
 
-  // If the server returned a non-OK status, return the error
+  // ── Handle API Errors ───────────────────────────────────────────
+
   if (!response.ok || data.success === false) {
     return {
       success: false,
@@ -181,21 +200,46 @@ export async function analyzeAudio(file: File): Promise<AnalysisResponse> {
     };
   }
 
+  // ── Success ─────────────────────────────────────────────────────
+
   return data as unknown as AnalysisResult;
 }
 
 // ── Utility Functions ───────────────────────────────────────────────────
 
-/** Format file size in human-readable form */
+/**
+ * Format bytes into readable string
+ */
 export function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/** Check if a file has an allowed audio extension */
+/**
+ * Validate supported audio formats
+ */
 export function isAllowedAudioFile(file: File): boolean {
-  const allowed = [".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac", ".wma"];
-  const ext = "." + file.name.split(".").pop()?.toLowerCase();
-  return allowed.includes(ext);
+
+  const allowedExtensions = [
+    ".mp3",
+    ".wav",
+    ".flac",
+    ".ogg",
+    ".m4a",
+    ".aac",
+    ".wma",
+  ];
+
+  const extension =
+    "." + file.name.split(".").pop()?.toLowerCase();
+
+  return allowedExtensions.includes(extension);
 }
