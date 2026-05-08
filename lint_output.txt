@@ -1,0 +1,57 @@
+
+> cflatminor@0.1.0 lint
+> eslint
+
+
+C:\Users\91636\cflatminor\app\about\developer\page.tsx
+  37:17   warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  79:140  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                          react/no-unescaped-entities
+
+C:\Users\91636\cflatminor\app\about\mercury\page.tsx
+  34:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\91636\cflatminor\app\components\analysis-results.tsx
+   3:17  warning  'useState' is defined but never used   @typescript-eslint/no-unused-vars
+   6:52  warning  'Clock' is defined but never used      @typescript-eslint/no-unused-vars
+  10:10  warning  'Progress' is defined but never used   @typescript-eslint/no-unused-vars
+  13:10  warning  'Separator' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\91636\cflatminor\app\components\header.tsx
+  4:17  warning  'LayoutDashboard' is defined but never used  @typescript-eslint/no-unused-vars
+  4:34  warning  'Search' is defined but never used           @typescript-eslint/no-unused-vars
+  4:42  warning  'Settings' is defined but never used         @typescript-eslint/no-unused-vars
+  4:52  warning  'CreditCard' is defined but never used       @typescript-eslint/no-unused-vars
+
+C:\Users\91636\cflatminor\app\components\intro-screen.tsx
+  20:18  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\91636\cflatminor\app\dashboard\page.tsx
+   3:10  warning  'useState' is defined but never used        @typescript-eslint/no-unused-vars
+   9:34  warning  'MoreVertical' is defined but never used    @typescript-eslint/no-unused-vars
+  10:10  warning  'Avatar' is defined but never used          @typescript-eslint/no-unused-vars
+  10:18  warning  'AvatarFallback' is defined but never used  @typescript-eslint/no-unused-vars
+  10:34  warning  'AvatarImage' is defined but never used     @typescript-eslint/no-unused-vars
+
+C:\Users\91636\cflatminor\app\gallery\page.tsx
+    3:10  warning  'useState' is defined but never used                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+   75:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  102:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\91636\cflatminor\app\login\page.tsx
+    5:25  warning  'Mail' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+   36:45  error    Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+C:\Users\91636\cflatminor\app\login\page.tsx:36:45
+  34 |                 key={i}
+  35 |                 animate={{ height: ["20%", "100%", "20%"] }}
+> 36 |                 transition={{ duration: 1 + Math.random(), repeat: Infinity, delay: i * 0.05 }}
+     |                                             ^^^^^^^^^^^^^ Cannot call impure function
+  37 |                 className="w-2 bg-white rounded-full"
+  38 |               />
+  39 |             ))}  react-hooks/purity
+  120:14  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          react/no-unescaped-entities
+
+✖ 23 problems (3 errors, 20 warnings)
+
