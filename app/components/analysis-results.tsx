@@ -1,16 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import type { AnalysisResult } from "@/app/lib/api";
 import { 
-  Music, Guitar, Drum, Mic, Piano, Wind, Activity, Clock, 
+  Music, Guitar, Drum, Mic, Piano, Wind, Activity, 
   BarChart2, Waves, ListMusic, AudioWaveform, Disc3
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
 
 interface AnalysisResultsProps {
   result: AnalysisResult;
@@ -104,10 +102,11 @@ export default function AnalysisResults({ result }: AnalysisResultsProps) {
       </div>
 
       <Tabs defaultValue="instruments" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-zinc-900 border border-zinc-800">
+        <TabsList className="grid w-full grid-cols-4 bg-zinc-900 border border-zinc-800">
           <TabsTrigger value="instruments">Instruments</TabsTrigger>
           <TabsTrigger value="audio">Audio Features</TabsTrigger>
           <TabsTrigger value="structure">Structure</TabsTrigger>
+          <TabsTrigger value="chords">Chords & Stems</TabsTrigger>
         </TabsList>
         
         <TabsContent value="instruments" className="mt-4 space-y-4">
@@ -207,6 +206,59 @@ export default function AnalysisResults({ result }: AnalysisResultsProps) {
               ) : (
                 <p className="text-zinc-500 text-sm">No structural sections detected.</p>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="chords" className="mt-4 space-y-4">
+           <Card className="bg-zinc-950 border-zinc-800 shadow-2xl">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Guitar className="w-5 h-5 text-green-400" />
+                Detected Chords
+              </CardTitle>
+              <CardDescription>
+                Music21 integrated chord progression mapped to timeline.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {result.chords && result.chords.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {result.chords.map((chord, idx) => (
+                    <div key={idx} className="flex flex-col items-center p-3 bg-zinc-900 border border-zinc-800 rounded-xl min-w-[60px]">
+                      <span className="text-xl font-bold text-white">{chord.chord}</span>
+                      <span className="text-[10px] text-zinc-500 mt-1">{formatDuration(chord.timestamp)}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-zinc-500 text-sm">No chords detected for this track.</p>
+              )}
+            </CardContent>
+          </Card>
+
+           <Card className="bg-zinc-950 border-zinc-800 shadow-2xl">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <AudioWaveform className="w-5 h-5 text-cyan-400" />
+                Stem Separation (Demucs)
+              </CardTitle>
+              <CardDescription>
+                Isolate vocals, drums, bass, and other instruments using Demucs AI architecture.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-4">
+                <button className="px-6 py-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-white font-bold rounded-xl flex items-center gap-2 transition-all active:scale-95">
+                  <Mic className="w-4 h-4 text-pink-400" /> Isolate Vocals
+                </button>
+                <button className="px-6 py-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-white font-bold rounded-xl flex items-center gap-2 transition-all active:scale-95">
+                  <Drum className="w-4 h-4 text-orange-400" /> Isolate Drums
+                </button>
+                <button className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all active:scale-95">
+                  Download All Stems (.zip)
+                </button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

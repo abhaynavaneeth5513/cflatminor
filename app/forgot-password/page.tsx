@@ -95,7 +95,7 @@ export default function ForgotPassword() {
 
         <div className="text-center mb-8 relative">
           <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400 mb-3 tracking-tight">Reset Password</h1>
-          <p className="text-zinc-400 text-sm font-medium tracking-wide">Enter your email and we'll send you a link to reset your password.</p>
+          <p className="text-zinc-400 text-sm font-medium tracking-wide">Enter your email and we&apos;ll send you a link to reset your password.</p>
         </div>
 
         <form className="space-y-5 mb-8 relative" onSubmit={handleSubmit}>

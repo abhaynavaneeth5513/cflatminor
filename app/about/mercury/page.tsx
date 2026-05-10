@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo } from "react";
 import Header from "@/app/components/header";
 import { motion } from "framer-motion";
 import { Swiper, SwiperSlide } from 'swiper/react';

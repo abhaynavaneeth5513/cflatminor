@@ -1,32 +1,32 @@
-const FETCH_TIMEOUT_MS = 200_000; // 200 seconds
+const FETCH_TIMEOUT_MS = 200000;
 
-/** Maximum allowed file size (matches backend) */
-const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 
-/** Railway Backend URL */
-const API_BASE_URL =
-  "https://cflatminor-production.up.railway.app";
+export interface AnalysisSection {
+  start: number;
+  end: number;
+  label: string;
+}
 
-// ── Response Types ──────────────────────────────────────────────────────
+export interface AnalysisChord {
+  timestamp: number;
+  chord: string;
+}
+
+export interface AnalysisTimelineEvent {
+  timestamp: number;
+  instrument: string;
+  confidence: number;
+}
 
 export interface AnalysisResult {
   success: true;
   filename: string;
   duration_seconds: number;
   instruments: Record<string, number>;
-
-  timeline?: Array<{
-    timestamp: number;
-    instrument: string;
-    confidence: number;
-  }>;
-
-  sections?: Array<{
-    start: number;
-    end: number;
-    label: string;
-  }>;
-
+  timeline?: AnalysisTimelineEvent[];
+  sections?: AnalysisSection[];
+  chords?: AnalysisChord[];
   metadata: {
     sample_rate: number;
     tempo_bpm: number;
@@ -57,24 +57,15 @@ export interface ApiError {
 
 export type AnalysisResponse = AnalysisResult | ApiError;
 
-// ── Type Guards ─────────────────────────────────────────────────────────
-
 export function isApiError(
   response: AnalysisResponse
 ): response is ApiError {
   return !response.success;
 }
 
-// ── API Functions ───────────────────────────────────────────────────────
-
-/**
- * Upload audio file for AI analysis
- */
 export async function analyzeAudio(
   file: File
 ): Promise<AnalysisResponse> {
-  
-  // ── Client Validation ───────────────────────────────────────────
 
   if (file.size === 0) {
     return {
@@ -86,26 +77,12 @@ export async function analyzeAudio(
   if (file.size > MAX_FILE_SIZE_BYTES) {
     return {
       success: false,
-      error: `File too large (${formatFileSize(
-        file.size
-      )}). Maximum allowed size is 50 MB.`,
+      error: "File too large.",
     };
   }
-
-  if (!isAllowedAudioFile(file)) {
-    return {
-      success: false,
-      error:
-        "Unsupported file type. Please upload MP3, WAV, FLAC, OGG, M4A, AAC, or WMA.",
-    };
-  }
-
-  // ── Build FormData ──────────────────────────────────────────────
 
   const formData = new FormData();
   formData.append("file", file);
-
-  // ── Setup Timeout ───────────────────────────────────────────────
 
   const controller = new AbortController();
 
@@ -113,103 +90,33 @@ export async function analyzeAudio(
     controller.abort();
   }, FETCH_TIMEOUT_MS);
 
-  let response: Response;
-
-  // ── API Request ─────────────────────────────────────────────────
-
   try {
-    response = await fetch(
-      `${API_BASE_URL}/analyze`,
-      {
-        method: "POST",
-        body: formData,
-        signal: controller.signal,
-      }
-    );
-  } catch (err) {
+
+    const response = await fetch("/api/analyze", {
+      method: "POST",
+      body: formData,
+      signal: controller.signal,
+    });
 
     clearTimeout(timeout);
 
-    if (
-      err instanceof DOMException &&
-      err.name === "AbortError"
-    ) {
-      return {
-        success: false,
-        error:
-          "Analysis timed out. The file may be too large or complex. Try a shorter clip.",
-      };
-    }
+    const data = await response.json();
+
+    return data;
+
+  } catch (err) {
+
+    clearTimeout(timeout);
 
     return {
       success: false,
       error:
         err instanceof Error
-          ? `Network error: ${err.message}`
-          : "Network error — please check your internet connection.",
+          ? err.message
+          : "Unknown error occurred.",
     };
   }
-
-  clearTimeout(timeout);
-
-  // ── Read Response Safely ────────────────────────────────────────
-
-  let responseText: string;
-
-  try {
-    responseText = await response.text();
-  } catch {
-    return {
-      success: false,
-      error: "Failed to read server response.",
-    };
-  }
-
-  // ── Empty Response Guard ────────────────────────────────────────
-
-  if (!responseText || responseText.trim() === "") {
-    return {
-      success: false,
-      error: "Server returned an empty response.",
-    };
-  }
-
-  // ── Parse JSON Safely ───────────────────────────────────────────
-
-  let data: Record<string, unknown>;
-
-  try {
-    data = JSON.parse(responseText);
-  } catch {
-    return {
-      success: false,
-      error: "Server returned invalid JSON.",
-      detail: responseText.slice(0, 300),
-    };
-  }
-
-  // ── Handle API Errors ───────────────────────────────────────────
-
-  if (!response.ok || data.success === false) {
-    return {
-      success: false,
-      error:
-        (data.error as string) ||
-        (data.detail as string) ||
-        `Server error (${response.status})`,
-    };
-  }
-
-  // ── Success ─────────────────────────────────────────────────────
-
-  return data as unknown as AnalysisResult;
 }
-
-// ── Utility Functions ───────────────────────────────────────────────────
-
-/**
- * Format bytes into readable string
- */
 export function formatFileSize(bytes: number): string {
 
   if (bytes < 1024) {
@@ -223,9 +130,6 @@ export function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/**
- * Validate supported audio formats
- */
 export function isAllowedAudioFile(file: File): boolean {
 
   const allowedExtensions = [
@@ -242,4 +146,33 @@ export function isAllowedAudioFile(file: File): boolean {
     "." + file.name.split(".").pop()?.toLowerCase();
 
   return allowedExtensions.includes(extension);
+}
+export async function analyzeUrl(
+  url: string
+): Promise<AnalysisResponse> {
+
+  try {
+
+    const response = await fetch("/api/analyze_url", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ url }),
+    });
+
+    const data = await response.json();
+
+    return data;
+
+  } catch (err) {
+
+    return {
+      success: false,
+      error:
+        err instanceof Error
+          ? err.message
+          : "URL analysis failed.",
+    };
+  }
 }

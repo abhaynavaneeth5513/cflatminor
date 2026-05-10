@@ -13,9 +13,12 @@ export default function LoadingBar() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
-    const timeout = setTimeout(() => setLoading(false), 500);
-    return () => clearTimeout(timeout);
+    const startTimeout = setTimeout(() => setLoading(true), 0);
+    const endTimeout = setTimeout(() => setLoading(false), 500);
+    return () => {
+      clearTimeout(startTimeout);
+      clearTimeout(endTimeout);
+    };
   }, [pathname]);
 
   return (

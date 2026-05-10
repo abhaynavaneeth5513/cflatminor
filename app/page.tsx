@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, memo } from "react";
+import { useState, useCallback, memo } from "react";
 import Header from "@/app/components/header";
 import FileUpload from "@/app/components/file-upload";
 import AnalysisResults from "@/app/components/analysis-results";
@@ -8,10 +8,14 @@ import IntroScreen from "@/app/components/intro-screen";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   analyzeAudio,
+  analyzeUrl,
   isApiError,
   type AnalysisResult,
 } from "@/app/lib/api";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import UrlInput from "@/app/components/url-input";
+import { Upload, Link as LinkIcon, Mic } from "lucide-react";
 
 // Pre-compute equalizer bar animation configs to avoid re-creation on every render
 const EQUALIZER_BARS = Array.from({ length: 12 }, (_, i) => ({
@@ -165,7 +169,7 @@ export default function Home() {
             className={`w-full ${result ? 'max-w-5xl' : 'max-w-2xl'} relative`}
           >
             
-            {/* Upload Box */}
+            {/* Input Box */}
             <AnimatePresence mode="wait">
               {!result && (
                 <motion.div 
@@ -176,26 +180,78 @@ export default function Home() {
                 >
                   <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500 rounded-[2rem] blur opacity-25 group-hover:opacity-40 transition-opacity duration-500"></div>
                   <div className="relative bg-zinc-950/80 p-8 md:p-10 rounded-[2rem] border border-white/10 shadow-2xl backdrop-blur-2xl hover-ripple">
-                    <FileUpload
-                      onFileSelect={handleFileSelect}
-                      selectedFile={selectedFile}
-                      disabled={loading}
-                    />
+                    <Tabs defaultValue="upload" className="w-full">
+                      <TabsList className="grid w-full grid-cols-3 bg-zinc-900 border border-zinc-800 rounded-xl mb-8 p-1">
+                        <TabsTrigger value="upload" className="rounded-lg data-[state=active]:bg-zinc-800 data-[state=active]:text-white">
+                          <Upload className="w-4 h-4 mr-2" /> Upload
+                        </TabsTrigger>
+                        <TabsTrigger value="url" className="rounded-lg data-[state=active]:bg-zinc-800 data-[state=active]:text-white">
+                          <LinkIcon className="w-4 h-4 mr-2" /> URL
+                        </TabsTrigger>
+                        <TabsTrigger value="live" className="rounded-lg data-[state=active]:bg-zinc-800 data-[state=active]:text-white">
+                          <Mic className="w-4 h-4 mr-2" /> Live
+                        </TabsTrigger>
+                      </TabsList>
 
-                    <button
-                      onClick={handleAnalyze}
-                      disabled={!selectedFile || loading}
-                      className="w-full mt-8 py-5 rounded-2xl font-bold text-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-white text-black hover:bg-zinc-200 hover:scale-[1.02] active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.3)]"
-                    >
-                      {loading ? (
-                        <span className="flex items-center justify-center gap-3">
-                          <div className="w-6 h-6 border-3 border-black border-t-transparent rounded-full animate-spin" />
-                          {progress}
-                        </span>
-                      ) : (
-                        "Analyze Track"
-                      )}
-                    </button>
+                      <TabsContent value="upload" className="mt-0">
+                        <FileUpload
+                          onFileSelect={handleFileSelect}
+                          selectedFile={selectedFile}
+                          disabled={loading}
+                        />
+                        <button
+                          onClick={handleAnalyze}
+                          disabled={!selectedFile || loading}
+                          className="w-full mt-8 py-5 rounded-2xl font-bold text-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-white text-black hover:bg-zinc-200 hover:scale-[1.02] active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.3)]"
+                        >
+                          {loading ? (
+                            <span className="flex items-center justify-center gap-3">
+                              <div className="w-6 h-6 border-3 border-black border-t-transparent rounded-full animate-spin" />
+                              {progress}
+                            </span>
+                          ) : (
+                            "Analyze Track"
+                          )}
+                        </button>
+                      </TabsContent>
+                      
+                      <TabsContent value="url" className="mt-0">
+                        <UrlInput 
+                          onUrlSubmit={async (url) => {
+                            setLoading(true);
+                            setError(null);
+                            setResult(null);
+                            setProgress("Fetching & analyzing URL — this may take 1-3 minutes...");
+                            try {
+                              const response = await analyzeUrl(url);
+                              if (isApiError(response)) {
+                                setError(response.error);
+                              } else {
+                                setResult(response);
+                              }
+                            } catch (err) {
+                              setError(err instanceof Error ? err.message : "Failed to fetch URL");
+                            } finally {
+                              setLoading(false);
+                              setProgress("");
+                            }
+                          }}
+                          disabled={loading}
+                        />
+                      </TabsContent>
+
+                      <TabsContent value="live" className="mt-0 text-center py-8">
+                        <Mic className="w-12 h-12 text-pink-500 mx-auto mb-4 animate-pulse" />
+                        <h3 className="text-xl font-bold text-white mb-2">Live Recognition</h3>
+                        <p className="text-zinc-400 mb-6 text-sm">Real-time AI audio breakdown directly from your microphone.</p>
+                        <button 
+                          onClick={() => window.location.href = '/live'}
+                          className="px-8 py-4 bg-gradient-to-r from-pink-600 to-purple-600 rounded-full font-bold text-white hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(236,72,153,0.3)]"
+                        >
+                          Open Live Mode
+                        </button>
+                      </TabsContent>
+                    </Tabs>
 
                     {error && (
                       <motion.div 

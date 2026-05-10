@@ -19,6 +19,10 @@ class Section(BaseModel):
     end: float
     label: str  # e.g., "Chorus", "Verse", "Drop"
 
+class Chord(BaseModel):
+    timestamp: float
+    chord: str
+
 class MusicMetadata(BaseModel):
     sample_rate: int
     tempo_bpm: float
@@ -51,6 +55,7 @@ class AnalysisResponse(BaseModel):
     instruments: Dict[str, float]  # e.g. {"Piano": 34.2, "Guitar": 28.1, ...}
     timeline: List[TimelineEvent] = []
     sections: List[Section] = []
+    chords: List[Chord] = []
     metadata: Optional[MusicMetadata] = None
 
 class ErrorResponse(BaseModel):

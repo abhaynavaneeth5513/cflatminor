@@ -8,7 +8,8 @@ import Image from "next/image";
 
 const LINKS = [
   { name: "Analyzer", href: "/" },
-  { name: "Live Recognition", href: "/live" },
+  { name: "Identify", href: "/recognize" },
+  { name: "Live", href: "/live" },
   { name: "Mercury Band", href: "/about/mercury" },
   { name: "About Dev", href: "/about/developer" },
 ] as const;

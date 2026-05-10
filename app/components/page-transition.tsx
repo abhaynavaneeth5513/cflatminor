@@ -9,11 +9,7 @@ const pageVariants = {
   exit: { opacity: 0, y: -8, filter: "blur(4px)" },
 };
 
-const pageTransition = {
-  type: "tween" as const,
-  ease: [0.25, 0.1, 0.25, 1],
-  duration: 0.35,
-};
+
 
 export default function PageTransition({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

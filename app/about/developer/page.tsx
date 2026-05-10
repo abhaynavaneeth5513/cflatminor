@@ -91,7 +91,7 @@ function AboutDeveloper() {
                   Engineering student and passionate technologist bridging the gap between artificial intelligence and musical expression.
                 </p>
                 <p>
-                  As an active keyboardist in the band <span className="text-transparent bg-clip-text bg-gradient-to-r from-zinc-200 to-zinc-500 font-bold tracking-widest uppercase">Mercury</span>, I've experienced firsthand the intricate nuances of live music performance. This deep understanding of music theory and audio dynamics inspired the creation of <span className="text-white font-semibold">CflatMinor</span>.
+                  As an active keyboardist in the band <span className="text-transparent bg-clip-text bg-gradient-to-r from-zinc-200 to-zinc-500 font-bold tracking-widest uppercase">Mercury</span>, I&apos;ve experienced firsthand the intricate nuances of live music performance. This deep understanding of music theory and audio dynamics inspired the creation of <span className="text-white font-semibold">CflatMinor</span>.
                 </p>
               </div>
 
